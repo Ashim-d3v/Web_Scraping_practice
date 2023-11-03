@@ -1,36 +1,34 @@
-const puppeteer = require("puppeteer")
-const fs = require("fs/promises")
+const { Keyboard } = require('puppeteer');
+const puppeteer = require('puppeteer-extra');
+const StealthPlugin = require('puppeteer-extra-plugin-stealth');
 
-async function start() {
-  const browser = await puppeteer.launch()
-  const page = await browser.newPage()
-  await page.goto("https://learnwebcode.github.io/practice-requests/")
+puppeteer.use(StealthPlugin());
 
-  const names = await page.evaluate(() => {
-    return Array.from(document.querySelectorAll(".info strong")).map(x => x.textContent)
-  })
-  await fs.writeFile("names.txt", names.join("\r\n"))
+const googleUsername = "YOUR_USERNAME";
+const googlePassword = "YOUR_PASSWORD";
 
-  await page.click("#clickme")
-  const clickedData = await page.$eval("#data", el => el.textContent)
-  console.log(clickedData)
+(async () => {
+   const browser = await puppeteer.launch({
+      headless: false,
+      args:[
+         '--no-sandbox',
+         '--disable-gpu',
+         '--enable-webgl',
+         '--window-size=800,800'
+      ]
+   }); 
 
-  const photos = await page.$$eval("img", imgs => {
-    return imgs.map(x => x.src)
-  })
+   const loginUrl = "https://accounts.google.com/AccountChooser?service=mail&continue=https://google.com&hl=en";
+   const ua = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.91 Mobile Safari/537.36'; 
+   const page = await browser.newPage();
 
-  await page.type("#ourfield", "blue")
-  await Promise.all([page.click("#ourform button"), page.waitForNavigation()])
-  const info = await page.$eval("#message", el => el.textContent)
+   await page.setUserAgent(ua);
+   await page.goto(loginUrl, { waitUntil: 'networkidle2' });
+   await page.type('input[type="email"]', googleUsername);
+   await page.keyboard.press('Enter');
+   await page.waitForTimeout(2000);
+   await page.type('input[type="password"]', googlePassword);
+   await page.keyboard.press('Enter');
+})();
 
-  console.log(info)
-
-  for (const photo of photos) {
-    const imagepage = await page.goto(photo)
-    await fs.writeFile(photo.split("/").pop(), await imagepage.buffer())
-  }
-
-  await browser.close()
-}
-
-start()
+ 
